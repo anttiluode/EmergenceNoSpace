@@ -9,4 +9,6 @@ jobs:
         with:
           node-version: '20'
       - run: node tests/test.js
+      - run: node tests/geometry.js
       - run: node experiment.js --seeds 2 --steps 500 --n 60 --interval 250 --output results.json
+      - run: node geometry.js 60 300 1 > geometry.json
