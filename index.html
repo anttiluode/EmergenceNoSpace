@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Emergence No Space · Relational world</title>
+<style>
+:root{color-scheme:dark;--bg:#080f18;--surface:#10202b;--line:#263c48;--txt:#e9f4f6;--dim:#8ca9b3;--cyan:#72d6ee;--gold:#ffd18c}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--txt);margin:0;font:14px/1.5 system-ui,Segoe UI,sans-serif}
+header{padding:22px 30px 12px;display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid var(--line)}h1{font-size:24px;letter-spacing:-.5px;margin:0}p{margin:5px 0;color:var(--dim)}
+.tag{color:var(--cyan);letter-spacing:2px;font-size:11px;font-weight:800}.wrap{max-width:1520px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;padding:18px}
+canvas{display:block;width:100%;background:#0b1720;border:1px solid var(--line);border-radius:12px}.viz{position:relative}#world{height:min(68vh,720px);min-height:400px}
+.overlay{position:absolute;top:15px;left:18px;color:var(--dim);pointer-events:none;font-size:12px}.pane{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.pane h2{font-size:15px;margin:0 0 12px}.controls{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.btn,select,input{color:var(--txt);background:#162e3d;border:1px solid #355362;border-radius:7px;padding:8px 11px;font:inherit}
+.btn{cursor:pointer}.btn:hover{background:#214355}.btn.primary{background:#15647c;border-color:#288ea9}label{font-size:12px;display:block;margin:8px 0;color:var(--dim)}input{width:100%}
+.stat{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:7px 0;font-variant-numeric:tabular-nums}.stat span{color:var(--dim)}.stat b{color:var(--txt)}
+.warn{padding:10px;border-left:3px solid var(--gold);background:#24231e;color:#e0cba3;font-size:12px}.small{font-size:12px;color:var(--dim)}
+#history{height:120px;margin-top:14px}.footer{padding:0 18px 20px;color:var(--dim);max-width:1520px;margin:auto;font-size:12px}
+@media(max-width:850px){.wrap{display:block}.pane{margin-top:15px}#world{height:48vh}header{padding:15px}}
+</style></head><body>
+<header><div><div class="tag">RELATIONAL ARTIFICIAL LIFE / EXPERIMENT ZERO</div><h1>EMERGENCE <span style="color:var(--cyan)">NO SPACE</span></h1><p>No x, y, z in the world. Only resource, edges, local rules, and inheritance.</p></div><div class="small">Rendering positions are invented by the viewer.<br>They do not influence the physics.</div></header>
+<main class="wrap"><section><div class="viz"><canvas id="world"></canvas><div class="overlay">CLICK A NODE TO CUT ONE EDGE · PRESS P TO PULSE</div></div><canvas id="history"></canvas><div class="small">This is a graph layout, not physical space. Cyan/gold = low/high resource; thicker edges = stronger conductance. A candidate dimension needs long, independent scaling ranges; a near-3 slope here does not establish emergent 3D.</div></section>
+<aside><div class="pane"><h2>World controls</h2>
+<label>Mode <select id="mode"><option value="evolve">Rewire + inheritance</option><option value="rewire">Rewire, no births</option><option value="fixed">Fixed random network</option></select></label>
+<label>Starting elements <select id="n"><option value="80">80</option><option value="120" selected>120</option><option value="200">200</option></select></label>
+<label>Seed <input id="seed" type="number" value="1" min="1" max="999999"></label>
+<label>Simulation speed <input id="speed" type="range" min="1" max="20" value="6"></label>
+<div class="controls"><button class="btn primary" id="play">Pause</button><button class="btn" id="step">Step</button><button class="btn" id="reset">Reset</button><button class="btn" id="export">Save metrics</button></div>
+<div class="small">The network starts as a connected random graph, not a lattice. Local two-hop link proposals do not target any spatial dimension.</div></div>
+<div class="pane"><h2>Measurements</h2><div id="stats"></div><div class="warn" id="warning">A near-3 slope on a tiny graph is not evidence of emergent space.</div></div>
+<div class="pane"><h2>Intervene</h2><p class="small">Click a node to cut one of its links. Press P to move resource from another node into the selected one. The adaptation rule may respond to the disturbance.</p>
+<div class="stat"><span>Selected node</span><b id="selected">none</b></div><div class="stat"><span>Local connections</span><b id="neighbors">–</b></div></div></aside></main>
+<footer class="footer">Coordinate-free adaptive network experiment. Not a simulation of real spacetime, open-ended evolution, or intelligence. Read the controls, measurements, and negative findings in README.md.</footer>
+<script src="core.js"></script><script>
+(function(){'use strict';
+const World=globalThis.NoSpace.World,$=id=>document.getElementById(id);
+let world,positions=[],running=true,selected=-1,history=[],lastMeasure=null,frames=0;
+const canvas=$('world'),ctx=canvas.getContext('2d'),chart=$('history'),ct=chart.getContext('2d');
+function reset(){world=new World({seed:Number($('seed').value)||1,n:Number($('n').value),maxNodes:Number($('n').value)*2,mode:$('mode').value});positions=[];selected=-1;history=[];measure();}
+function fit(canvas){const r=canvas.getBoundingClientRect(),scale=Math.min(2,window.devicePixelRatio||1),w=Math.floor(r.width*scale),h=Math.floor(r.height*scale);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}return {w,h};}
+function layout(w,h){const n=world.nodes.length;
+ while(positions.length<n){const i=positions.length,a=2*Math.PI*((i*0.61803398875)%1),rad=0.13+0.5*((i*0.41421356)%1);positions.push({x:w*(.5+Math.cos(a)*rad*.45),y:h*(.5+Math.sin(a)*rad*.45),vx:0,vy:0});}
+ const target=Math.sqrt((w*h)/Math.max(n,1))*1.42;
+ for(const p of positions){p.vx+=(w*.5-p.x)*.00002;p.vy+=(h*.5-p.y)*.00002;}
+ for(const e of world.edges.values()){const a=positions[e.a],b=positions[e.b],dx=b.x-a.x,dy=b.y-a.y,d=Math.max(1,Math.hypot(dx,dy)),f=.00065*(d-target);a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;}
+ for(let i=0;i<n;i++){const a=positions[i];for(let k=0;k<5;k++){const j=(i*37+k*71+13)%n;if(i===j)continue;const b=positions[j],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+10,f=Math.min(.035,36/d2);a.vx+=dx*f;a.vy+=dy*f;}}
+ for(const p of positions){p.vx=Math.max(-4,Math.min(4,p.vx*.76));p.vy=Math.max(-4,Math.min(4,p.vy*.76));p.x=Math.max(10,Math.min(w-10,p.x+p.vx));p.y=Math.max(10,Math.min(h-10,p.y+p.vy));}
+}
+function draw(){const size=fit(canvas),w=size.w,h=size.h;ctx.fillStyle='#0b1720';ctx.fillRect(0,0,w,h);layout(w,h);
+ ctx.lineCap='round';for(const e of world.edges.values()){const a=positions[e.a],b=positions[e.b];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle='rgba(102,178,192,.19)';ctx.lineWidth=Math.max(.5,e.w*1.2);ctx.stroke();}
+ for(const p of world.nodes){const z=positions[p.id],high=Math.min(1,p.mass/2),rad=2.5+Math.sqrt(Math.max(0,p.mass))*2;ctx.beginPath();ctx.arc(z.x,z.y,rad,0,Math.PI*2);ctx.fillStyle='rgb('+Math.floor(55+175*high)+','+Math.floor(204-22*high)+','+Math.floor(226-100*high)+')';ctx.fill();}
+ if(selected>=0&&selected<positions.length){const p=positions[selected];ctx.strokeStyle='#ffd18c';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.stroke();}
+}
+function measure(){lastMeasure=world.snapshot();history.push(lastMeasure);if(history.length>250)history.shift();const x=lastMeasure;
+ const data=[['Tick',x.tick],['Elements',x.nodes],['Links',x.edges],['Births',x.births],['Mean degree',x.meanDegree.toFixed(2)],['Clustering',x.clustering.toFixed(3)],['Growth slope (NOT dimension)',x.growthDimension===null?'n/a':x.growthDimension.toFixed(2)],['Valid fit radii',x.meanFitRadii.toFixed(1)],['Sample eccentricity',x.meanEccentricity.toFixed(1)],['Largest sampled component',(100*x.giantSample).toFixed(0)+'%'],['Pump imbalance',x.pumpImbalance.toFixed(3)],['Mass error',x.massDrift.toExponential(1)]];
+ $('stats').innerHTML=data.map(pair=>'<div class="stat"><span>'+pair[0]+'</span><b>'+pair[1]+'</b></div>').join('');
+ $('selected').textContent=selected<0?'none':selected;$('neighbors').textContent=selected<0?'–':world.adj[selected].size;
+ $('warning').textContent=x.geometryEvidence==='candidate-only'?'Preliminary graph-growth fit only: 3D NOT established. Check diffusion, larger graphs, and null controls.':'Insufficient unsaturated scales for a geometry claim. A near-3 slope on this random finite graph is an artifact.';
+ drawHistory();
+}
+function drawHistory(){const size=fit(chart),w=size.w,h=size.h;ct.fillStyle='#0b1720';ct.fillRect(0,0,w,h);if(history.length<2)return;
+ const cols=[['meanDegree','#72d6ee'],['pumpImbalance','#ffd18c']];
+ for(const pair of cols){const ys=history.map(s=>s[pair[0]]),lo=Math.min(...ys),hi=Math.max(...ys),span=Math.max(.1,hi-lo);ct.strokeStyle=pair[1];ct.lineWidth=2;ct.beginPath();ys.forEach((v,i)=>{const x=(i/(ys.length-1))*(w-24)+12,y=h-10-(v-lo)/span*(h-25);if(i)ct.lineTo(x,y);else ct.moveTo(x,y);});ct.stroke();}
+ ct.fillStyle='#b0c7ca';ct.font='12px system-ui';ct.fillText('Degree (cyan) / pump imbalance (gold), normalized independently',12,15);
+}
+function frame(){if(running){for(let k=0;k<Number($('speed').value);k++)world.step();if(frames++%7===0)measure();}draw();requestAnimationFrame(frame);}
+$('play').onclick=()=>{running=!running;$('play').textContent=running?'Pause':'Resume';};
+$('step').onclick=()=>{running=false;$('play').textContent='Resume';world.step();measure();};
+$('reset').onclick=reset;$('mode').onchange=reset;$('n').onchange=reset;
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify({config:{mode:world.mode,seed:$('seed').value},history},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nospace-metrics.json';a.click();URL.revokeObjectURL(a.href);};
+canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)*canvas.width/rect.width,y=(e.clientY-rect.top)*canvas.height/rect.height;let best=-1,dist=Infinity;positions.forEach((p,i)=>{const d=(p.x-x)**2+(p.y-y)**2;if(d<dist){dist=d;best=i;}});if(dist>250)return;selected=best;const j=[...world.adj[best]][0];if(j!==undefined){const edge=world.edges.get(best<j?best+':'+j:j+':'+best);world.unlink(edge);}measure();});
+window.addEventListener('keydown',e=>{if(e.key.toLowerCase()!=='p'||selected<0)return;const j=(selected+Math.floor(world.nodes.length/2))%world.nodes.length,from=world.nodes[j],q=Math.min(.3,from.mass*.2);from.mass-=q;world.nodes[selected].mass+=q;measure();});
+reset();requestAnimationFrame(frame);
+})();</script></body></html>
