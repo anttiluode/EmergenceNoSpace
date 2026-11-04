@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {World,bfs}=require('../core.js');
+const {run}=require('../experiment.js');
+function test(name,fn){fn();console.log('PASS',name);}
+test('deterministic evolution',()=>{const a=new World({seed:13,n:48}),b=new World({seed:13,n:48});for(let i=0;i<280;i++){a.step();b.step();}assert.deepEqual(a.snapshot(),b.snapshot());assert.deepEqual([...a.edges], [...b.edges]);});
+test('mass conserved through flow, births, bonding and pruning',()=>{for(const mode of ['fixed','rewire','evolve']){const w=new World({seed:4,n:60,mode});const initial=w.totalMass();for(let t=0;t<1600;t++){w.step();assert.ok(w.nodes.every(n=>n.mass>=-1e-9));}assert.ok(Math.abs(w.totalMass()-initial)<1e-7,mode+' mass drift');}});
+test('world has no coordinates',()=>{const w=new World({seed:6,n:64});assert.ok(w.nodes.every(n=>!('x'in n||'y'in n||'z'in n)));});
+test('fixed graph remains unchanged',()=>{const w=new World({seed:3,n:45,mode:'fixed'});const keys=[...w.edges.keys()];for(let i=0;i<450;i++)w.step();assert.deepEqual([...w.edges.keys()],keys);assert.equal(w.nodes.length,45);});
+test('reference dimension on ring, square, cubic graphs',()=>{const make=(d,side)=>{const n=side**d,adj=Array.from({length:n},()=>new Set());for(let i=0;i<n;i++){let idx=i;const c=[];for(let j=0;j<d;j++){c.push(idx%side);idx=Math.floor(idx/side);}for(let axis=0;axis<d;axis++){const x=c.slice();x[axis]=(x[axis]+1)%side;let j=0;for(let k=d-1;k>=0;k--)j=j*side+x[k];adj[i].add(j);adj[j].add(i);}}return adj;};const widths=[30,12,9];const log=(a)=>Math.log(a);let estimates=[];for(let d=1;d<=3;d++){const adj=make(d,widths[d-1]),sizes=[];const dist=bfs(adj,0);for(let r=2;r<=Math.min(4,widths[d-1]/2);r++)sizes.push([r,dist.filter(x=>x>=0&&x<=r).length]);const aa=sizes.map(v=>log(v[0])),bb=sizes.map(v=>log(v[1]));const slope=(aa[aa.length-1]-aa[0])?(bb[bb.length-1]-bb[0])/(aa[aa.length-1]-aa[0]):0;estimates.push(slope);}assert.ok(estimates[0]<estimates[1]&&estimates[1]<estimates[2],JSON.stringify(estimates));});
+test('experiment emits all matched modes and seeds',()=>{const rows=run({seeds:2,steps:10,n:24,interval:5});assert.equal(rows.length,3*2*3);assert.deepEqual(new Set(rows.map(x=>x.mode)),new Set(['fixed','rewire','evolve']));});
