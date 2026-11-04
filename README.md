@@ -1,5 +1,7 @@
 # Emergence No Space
 
+[Try it at!](https://anttiluode.github.io/)
+
 **Can a coordinate-free, resource-conserving, locally adaptive network grow an effective low-dimensional geometry?**
 
 This is an experimental artificial-life toy, **not** a simulation of spacetime or evidence that a three-dimensional universe has emerged.
