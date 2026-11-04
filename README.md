@@ -48,24 +48,25 @@ The dashboard exports shortest-path radius-ball volumes, an approximate log-log 
 
 An apparent growth slope near **3 does not mean the network formed 3D space**. Even a random finite graph with rapid exponential neighborhood growth can return a near-three slope when fitted over only two or three unsaturated graph radii. The viewer warns if the diagnostic has insufficient scales.
 
-Real evidence would require larger graphs, robust fits over substantial scale intervals, comparison against size- and degree-matched null graphs, a stable spectral dimension from diffusion return probabilities, and checks that local propagating signals behave consistently with the inferred dimension. These experiments are not yet implemented or completed. The first smoke run illustrates the false-positive problem (see [docs/smoke.md](docs/smoke.md)).
+An independent [geometry.js](geometry.js) instrument now estimates spectral dimension from lazy random-walk return probabilities and constructs degree-preserving edge-swapped null graphs. Run it with: node geometry.js 120 2500 1. **Both apparent graph-volume and spectral exponents can still be misleading on finite, rapidly mixing graphs.** Serious evidence requires longer scale ranges, multiple seeds, comparisons with size- and degree-matched nulls, and consistent propagation behavior. The initial smoke checks do not establish emergent dimension. The first smoke run illustrates the false-positive problem (see [docs/smoke.md](docs/smoke.md)).
 
 ## Five research gates
 
 - **G0 — physical consistency:** No coordinates in the physics, deterministic replay, nonnegative resource, numerical conservation, and working fixed-topology baseline.
 - **G1 — topology changes:** Do local rules create repeatable graph motifs across fresh seeds? Compare matched controls and account for added edges.
 - **G2 — effective geometry:** Do ball volumes exhibit a stable, statistically supported power law over adequate unsaturated scales? A near-three scalar alone is a fail.
-- **G3 — independent diffusion:** Does random-walk return probability imply a compatible spectral dimension, with finite-size null controls?
+- **G3 — independent diffusion:** The diagnostic and degree-preserving null graph are implemented. Do return probabilities imply a compatible spectral dimension over enough scales, with strong size- and degree-matched controls?
 - **G4 — functional consequence:** Do emergent structures improve held-out signal routing, retention, or damage recovery under equal resource and edge budgets?
 
-Only G0 is implemented as an engineering test. The other gates are open research questions, not achievements.
+G0 and the G3 measurement instrument are implemented and tested; full G1–G4 scientific claims remain open questions, not achievements.
 
 ## Files
 
 - [core.js](core.js) — identical coordinate-free graph dynamics used in browser, test suite, and CLI.
 - [index.html](index.html) — offline graph viewer with interactive damage, controls, and export. Layout never influences physics.
 - [experiment.js](experiment.js) — seed-matched trajectories and JSON export.
-- [tests/test.js](tests/test.js) — conservation, replay, frozen topology, dimension-reference sanity checks.
+- [geometry.js](geometry.js) — independent diffusion return-probability scaling and degree-preserving graph-swap null.
+- [tests/test.js](tests/test.js), [tests/geometry.js](tests/geometry.js) — conservation, replay, static control, reference lattice dimension, degree-preserving nulls, non-invasive diagnostic checks.
 - [docs/smoke.md](docs/smoke.md) — exploratory local measurements and caveats.
 - [.github/workflows/test.yml](.github/workflows/test.yml) — basic CI smoke check.
 
