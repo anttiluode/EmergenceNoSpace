@@ -31,7 +31,7 @@ function volume(adj,{samples=12,maxRadius=8}={}){
 function spectral(adj,{samples=10,times=[4,8,12,16,24,32,48,64]}={}){
   const n=adj.length,starts=Array.from({length:Math.min(samples,n)},(_,i)=>Math.floor((i+.5)*n/Math.min(samples,n)));
   const maxT=Math.max(...times),returns=Array(times.length).fill(0),baseline=[];
-  for(const start of starts){const d=bfs(adj,start),size=d.filter(x=>x>=0).length;baseline.push(1/size);
+  for(const start of starts){const d=bfs(adj,start),component=d.map((dist,i)=>dist>=0?i:-1).filter(i=>i>=0),degSum=component.reduce((sum,i)=>sum+adj[i].size,0);baseline.push(degSum?adj[start].size/degSum:1);
     let p=new Float64Array(n);p[start]=1;
     for(let t=1;t<=maxT;t++){
       const q=new Float64Array(n);
