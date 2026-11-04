@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {World}=require('../core.js');
+const {shuffleDegreePreserving,spectral,compare}=require('../geometry.js');
+const w=new World({seed:4,n:80});for(let k=0;k<1000;k++)w.step();
+const degrees=w.adj.map(a=>a.size),edges=w.edges.size,state=w.snapshot();
+const shuffled=shuffleDegreePreserving(w.adj,123);
+assert.deepEqual(shuffled.adj.map(a=>a.size),degrees);
+assert.equal(shuffled.adj.reduce((s,a)=>s+a.size,0),2*edges);
+assert.deepEqual(w.snapshot(),state,'metric computation must not modify physical state');
+const x=compare(w,321);
+assert.ok(Number.isFinite(x.real.stationaryReturn));assert.ok(x.nullSwaps>0);
+assert.deepEqual(w.snapshot(),state);
+const make=(d,L)=>{const n=L**d,adj=Array.from({length:n},()=>new Set());for(let i=0;i<n;i++){let rem=i;const c=[];for(let k=0;k<d;k++){c.push(rem%L);rem=Math.floor(rem/L);}for(let a=0;a<d;a++){const v=c.slice();v[a]=(v[a]+1)%L;let j=0;for(let b=d-1;b>=0;b--)j=j*L+v[b];adj[i].add(j);adj[j].add(i);}}return adj;};
+const ref=[make(1,32),make(2,16),make(3,9)].map(spectral);
+console.log('Reference spectral slopes',ref.map(x=>x.spectralSlope));
+assert.ok(ref[0].spectralSlope<ref[1].spectralSlope&&ref[1].spectralSlope<ref[2].spectralSlope);
+console.log('PASS degree-preserving null, non-invasive geometry, lattice reference spectra');
