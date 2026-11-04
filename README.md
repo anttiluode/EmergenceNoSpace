@@ -1,6 +1,6 @@
 # Emergence No Space
 
-[Try it at!](https://anttiluode.github.io/)
+[Try it at!](https://anttiluode.github.io/EmergenceNoSpace/)
 
 **Can a coordinate-free, resource-conserving, locally adaptive network grow an effective low-dimensional geometry?**
 
