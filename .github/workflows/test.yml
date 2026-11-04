@@ -1,0 +1,12 @@
+name: Validate coordinate-free model
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node tests/test.js
+      - run: node experiment.js --seeds 2 --steps 500 --n 60 --interval 250 --output results.json
